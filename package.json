@@ -7,7 +7,10 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "build:sidecar": "cargo build --release --manifest-path src-tauri/sidecar/Cargo.toml && node scripts/copy-sidecar.mjs",
+    "build:jre": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-jre.ps1",
+    "build:jre:mac": "bash scripts/build-jre.sh"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.10.1",

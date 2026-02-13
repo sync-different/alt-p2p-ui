@@ -122,47 +122,65 @@ jlink resolves transitive dependencies automatically (`java.logging`, `java.xml`
 
 ### Size comparison
 
-| What | Size |
-|------|------|
-| Full JDK 17 | 305MB |
-| jpackage JRE | ~150-200MB |
-| **jlink custom JRE** | **29MB** |
-| Fat JAR | 10MB |
-| **Total .app** | **44MB** |
-| **.dmg (compressed)** | **28MB** |
+| What | macOS | Windows |
+|------|-------|---------|
+| Full JDK 17+ | 305MB | 305MB |
+| jpackage JRE | ~150-200MB | ~150-200MB |
+| **jlink custom JRE** | **29MB** | **~33MB** |
+| Fat JAR | 10MB | 10MB |
+| **Total bundle** | **44MB (.app)** | **~48MB** |
+| **Installer** | **28MB (.dmg)** | **~45MB (NSIS .exe)** |
 
-### Build script
+### Build scripts
 
-`scripts/build-jre.sh` automates the process:
+**macOS/Linux:** `scripts/build-jre.sh` (`npm run build:jre:mac`)
 
 ```bash
-# Detect required modules from the fat JAR
 MODULES=$(jdeps --print-module-deps --ignore-missing-deps "$JAR_PATH")
 MODULES="${MODULES},jdk.crypto.ec"
-
-# Build stripped JRE
-jlink \
-  --add-modules "$MODULES" \
-  --output src-tauri/resources/jre \
-  --strip-debug \
-  --no-man-pages \
-  --no-header-files \
-  --compress=2
+jlink --add-modules "$MODULES" --output src-tauri/resources/jre \
+  --strip-debug --no-man-pages --no-header-files --compress=2
 ```
 
-The output at `src-tauri/resources/jre/` is gitignored (platform-specific build artifact).
+**Windows:** `scripts/build-jre.ps1` (`npm run build:jre`)
+
+```powershell
+# Resolves jdeps/jlink via JAVA_HOME or PATH (JAVA_HOME recommended)
+$Modules = & $Jdeps --print-module-deps --ignore-missing-deps $JarPath
+$Modules = "$Modules,jdk.crypto.ec"
+& $Jlink --add-modules $Modules --output $OutputDir `
+  --strip-debug --no-man-pages --no-header-files --compress=2
+```
+
+The output at `src-tauri/resources/jre/` is gitignored (platform-specific build artifact). A `.gitkeep` file ensures the directory exists on fresh clones (Tauri validates resource paths at build time).
 
 ## Sidecar: Java Resolution
 
-The `run-java` sidecar script determines how to invoke Java:
+The sidecar binary finds and launches Java, forwarding all arguments and inheriting stdio so NDJSON events flow through to Tauri.
+
+### macOS (bash script)
+
+The `run-java` sidecar (`src-tauri/scripts/run-java.sh`) is a bash script:
 
 1. **Production** (inside `.app` bundle): Uses the bundled JRE at `Contents/Resources/jre/bin/java`. The script resolves this via its own location (`$SCRIPT_DIR/../Resources/jre/bin/java`), since sidecars live in `Contents/MacOS/` and resources in `Contents/Resources/`.
 2. **Development** (`cargo tauri dev`): The bundled JRE doesn't exist, so the script falls back to system Java by probing `/usr/libexec/java_home`, Homebrew paths, and `/usr/bin/java`.
 
+### Windows (compiled Rust binary)
+
+On Windows, Tauri's shell plugin only resolves `.exe` sidecars, so a bash script won't work. The sidecar is a compiled Rust binary (`src-tauri/sidecar/src/main.rs`):
+
+1. **Production** (NSIS install): Uses the bundled JRE at `<exe_dir>\jre\bin\java.exe`. On Windows, Tauri places sidecars and resources in the same install directory.
+2. **Development** (`cargo tauri dev`): Falls back to `%JAVA_HOME%\bin\java.exe`, then `java` on PATH.
+3. Uses `CREATE_NO_WINDOW` flag to prevent console window flash when spawning Java.
+
+Build with `npm run build:sidecar` (compiles the crate and copies the `.exe` with the correct platform triple suffix).
+
 ### Tauri Sidecar Wiring
 
 - `tauri.conf.json` > `bundle.externalBin`: `["binaries/run-java"]`
-- Binary at `src-tauri/binaries/run-java-aarch64-apple-darwin` (platform suffix required by Tauri)
+- macOS binary at `src-tauri/binaries/run-java-aarch64-apple-darwin` (bash script)
+- Windows binary at `src-tauri/binaries/run-java-x86_64-pc-windows-msvc.exe` (compiled, gitignored)
+- Platform suffix is required by Tauri &mdash; it auto-selects the correct binary at runtime
 - `capabilities/default.json`: `shell:allow-spawn` permission with sidecar scope (not `shell:allow-execute` &mdash; `Command.sidecar().spawn()` uses the `spawn` IPC channel)
 
 ## Resource Bundling
@@ -176,7 +194,7 @@ Configured in `tauri.conf.json` > `bundle.resources`:
 }
 ```
 
-At build time, Tauri copies the JAR and the entire JRE directory tree into `Contents/Resources/`. At runtime, `resolveResource("alt-p2p.jar")` returns the absolute path inside the bundle.
+At build time, Tauri copies the JAR and the entire JRE directory tree into the bundle. On macOS this is `Contents/Resources/`; on Windows it's the install directory alongside the exe. At runtime, `resolveResource("alt-p2p.jar")` returns the absolute path inside the bundle (cross-platform).
 
 ## Security Model
 
@@ -188,6 +206,8 @@ At build time, Tauri copies the JAR and the entire JRE directory tree into `Cont
 
 ## Build Pipeline
 
+### macOS
+
 ```bash
 # 1. Build the fat JAR (in alt-p2p/)
 cd ../alt-p2p && mvn package
@@ -196,5 +216,21 @@ cd ../alt-p2p && mvn package
 bash scripts/build-jre.sh
 
 # 3. Build the Tauri app (bundles JRE + JAR + sidecar + frontend)
+npm run tauri build
+```
+
+### Windows
+
+```powershell
+# 1. Build the fat JAR (in alt-p2p/)
+cd ..\alt-p2p; mvn package; cd ..\alt-p2p-ui
+
+# 2. Compile the sidecar .exe and copy with platform triple suffix
+npm run build:sidecar
+
+# 3. Build the custom JRE
+npm run build:jre
+
+# 4. Build the Tauri app (bundles JRE + JAR + sidecar + frontend)
 npm run tauri build
 ```

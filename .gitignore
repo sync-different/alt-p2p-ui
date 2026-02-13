@@ -6,9 +6,14 @@ dist/
 
 # Rust/Tauri
 src-tauri/target/
+src-tauri/sidecar/target/
 
-# Bundled JRE (built by scripts/build-jre.sh)
-src-tauri/resources/jre/
+# Compiled sidecar binaries (built from src-tauri/sidecar/)
+src-tauri/binaries/*.exe
+
+# Bundled JRE contents (built by build-jre scripts, keep .gitkeep for Tauri)
+src-tauri/resources/jre/*
+!src-tauri/resources/jre/.gitkeep
 
 # IDE
 .vscode/
