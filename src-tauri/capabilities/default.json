@@ -1,0 +1,23 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nicegui/tauri/main/crates/tauri-utils/schema.json",
+  "identifier": "default",
+  "description": "Default capabilities for the app",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "dialog:default",
+    "dialog:allow-open",
+    "dialog:allow-save",
+    "shell:allow-stdin-write",
+    {
+      "identifier": "shell:allow-spawn",
+      "allow": [
+        {
+          "name": "binaries/run-java",
+          "sidecar": true,
+          "args": true
+        }
+      ]
+    }
+  ]
+}
