@@ -4,6 +4,8 @@ Desktop GUI for [alt-p2p](https://github.com/sync-different/alt-p2p), an encrypt
 
 The app bundles a custom Java runtime (via jlink) and the alt-p2p fat JAR, so end users don't need Java installed.
 
+<img width="873" height="921" alt="alt-p2p-ui-screenshot3" src="https://github.com/user-attachments/assets/5ff1cd1f-ef90-4c0e-be95-e4c03ff2a88c" />
+
 ## Prerequisites (development only)
 
 - **Node.js** 18+
