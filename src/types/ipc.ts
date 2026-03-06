@@ -14,6 +14,7 @@ export type TransferState =
   | "transferring"
   | "verifying"
   | "complete"
+  | "cancelled"
   | "error";
 
 /** Events emitted as newline-delimited JSON on stdout by the JAR */

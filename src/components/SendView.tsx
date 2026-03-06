@@ -1,18 +1,26 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { LogicalSize } from "@tauri-apps/api/dpi";
 import type { SessionConfig as SessionConfigType } from "../types/ipc";
 import { useTransfer } from "../hooks/useTransfer";
 import SessionConfig from "./SessionConfig";
 import ConnectionStatus from "./ConnectionStatus";
 import TransferProgress from "./TransferProgress";
+import DebugConsole from "./DebugConsole";
 
-export default function SendView() {
+interface Props {
+  onActiveChange: (active: boolean) => void;
+}
+
+export default function SendView({ onActiveChange }: Props) {
   const [config, setConfig] = useState<SessionConfigType>({
     sessionId: "",
     psk: "",
     serverAddress: "",
   });
   const [filePath, setFilePath] = useState<string | null>(null);
+  const [debug, setDebug] = useState(false);
 
   const {
     transferState,
@@ -21,14 +29,27 @@ export default function SendView() {
     fileInfo,
     result,
     error,
+    logs,
     startSend,
     cancel,
+    clearLogs,
     reset,
   } = useTransfer();
 
-  const isActive = transferState !== "idle" && transferState !== "complete" && transferState !== "error";
+  const isActive = transferState !== "idle" && transferState !== "complete" && transferState !== "cancelled" && transferState !== "error";
   const canStart =
     config.sessionId && config.psk && config.serverAddress && filePath;
+
+  useEffect(() => {
+    onActiveChange(isActive);
+  }, [isActive, onActiveChange]);
+
+  useEffect(() => {
+    const win = getCurrentWindow();
+    const hasContent = isActive || transferState === "complete" || transferState === "cancelled" || transferState === "error";
+    const height = hasContent ? (debug ? 900 : 700) : (debug ? 800 : 600);
+    win.setSize(new LogicalSize(800, height));
+  }, [isActive, transferState, debug]);
 
   async function pickFile() {
     const selected = await open({
@@ -118,6 +139,23 @@ export default function SendView() {
         </div>
       )}
 
+      {transferState === "cancelled" && (
+        <div className="rounded-lg bg-yellow-900/20 border border-yellow-500/30 p-4 space-y-2">
+          <p className="text-yellow-400 font-semibold text-sm">
+            Transfer cancelled
+          </p>
+          <p className="text-xs text-yellow-300/70">
+            The transfer was stopped by user.
+          </p>
+          <button
+            onClick={reset}
+            className="mt-2 rounded-lg bg-slate-700 hover:bg-slate-600 px-4 py-2 text-sm font-medium text-slate-200 transition-colors"
+          >
+            New Transfer
+          </button>
+        </div>
+      )}
+
       {transferState === "error" && error && (
         <div className="rounded-lg bg-red-900/20 border border-red-500/30 p-4 space-y-2">
           <p className="text-red-400 font-semibold text-sm">Error</p>
@@ -130,6 +168,18 @@ export default function SendView() {
           </button>
         </div>
       )}
+
+      <label className="flex items-center gap-2 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={debug}
+          onChange={(e) => setDebug(e.target.checked)}
+          className="rounded border-slate-600 bg-slate-800 text-blue-500 focus:ring-blue-500/30 focus:ring-offset-0"
+        />
+        <span className="text-xs text-slate-500">Debug console</span>
+      </label>
+
+      {debug && <DebugConsole logs={logs} onClear={clearLogs} />}
     </div>
   );
 }

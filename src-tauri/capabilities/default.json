@@ -9,6 +9,7 @@
     "dialog:allow-open",
     "dialog:allow-save",
     "shell:allow-stdin-write",
+    "core:window:allow-set-size",
     {
       "identifier": "shell:allow-spawn",
       "allow": [

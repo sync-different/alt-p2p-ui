@@ -189,7 +189,7 @@ Configured in `tauri.conf.json` > `bundle.resources`:
 
 ```json
 {
-  "../../alt-p2p/target/alt-p2p-0.1.0-SNAPSHOT.jar": "alt-p2p.jar",
+  "../../alt-p2p/target/alt-p2p-0.2.0-SNAPSHOT.jar": "alt-p2p.jar",
   "resources/jre/": "jre/"
 }
 ```

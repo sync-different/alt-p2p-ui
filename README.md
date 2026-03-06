@@ -125,7 +125,7 @@ No Java installation needed on either platform — the custom JRE is bundled.
 
 1. Start the **coordination server** on a reachable host:
    ```bash
-   java -jar alt-p2p-0.1.0-SNAPSHOT.jar server --psk <shared-secret>
+   java -jar alt-p2p-0.2.0-SNAPSHOT.jar server --psk <shared-secret>
    ```
 2. On the **sender** Mac: open the app, select the Send tab, fill in the session ID, pre-shared key, and server address (`host:9000`), pick a file, and click Send.
 3. On the **receiver** Mac: open the app, select the Receive tab, fill in the same session ID, PSK, and server address, pick an output directory, and click Receive.

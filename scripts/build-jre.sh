@@ -7,7 +7,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-JAR_PATH="${PROJECT_DIR}/../alt-p2p/target/alt-p2p-0.1.0-SNAPSHOT.jar"
+JAR_PATH="${PROJECT_DIR}/../alt-p2p/target/alt-p2p-0.2.0-SNAPSHOT.jar"
 OUTPUT_DIR="${PROJECT_DIR}/src-tauri/resources/jre"
 
 # Validate fat JAR exists

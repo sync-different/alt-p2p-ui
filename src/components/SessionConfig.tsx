@@ -19,6 +19,9 @@ export default function SessionConfig({ config, onChange, disabled }: Props) {
           onChange={(e) => onChange({ ...config, sessionId: e.target.value })}
           disabled={disabled}
           placeholder="e.g. my-transfer-123"
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
           className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
         />
       </div>
@@ -32,6 +35,9 @@ export default function SessionConfig({ config, onChange, disabled }: Props) {
           onChange={(e) => onChange({ ...config, psk: e.target.value })}
           disabled={disabled}
           placeholder="Shared secret"
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
           className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
         />
       </div>

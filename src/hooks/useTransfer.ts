@@ -31,11 +31,18 @@ const initialState: TransferHookState = {
   logs: [],
 };
 
+function ts(): string {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}:${String(d.getSeconds()).padStart(2, "0")}.${String(d.getMilliseconds()).padStart(3, "0")}`;
+}
+
 export function useTransfer() {
   const [state, setState] = useState<TransferHookState>(initialState);
   const processRef = useRef<Child | null>(null);
+  const cancelledRef = useRef(false);
 
   const handleEvent = useCallback((line: string) => {
+    if (cancelledRef.current) return;
     const trimmed = line.trim();
     if (!trimmed || !trimmed.startsWith("{")) return;
 
@@ -43,10 +50,16 @@ export function useTransfer() {
       const event: IpcEvent = JSON.parse(trimmed);
 
       setState((prev) => {
+        // Log all stdout events except progress (too noisy)
+        const logLine =
+          event.event !== "progress" ? `${ts()} [stdout] ${trimmed}` : null;
+        const newLogs = logLine ? [...prev.logs, logLine] : prev.logs;
+
         switch (event.event) {
           case "status":
             return {
               ...prev,
+              logs: newLogs,
               connectionState: event.state,
               transferState:
                 event.state === "connected" ? "transferring" : "connecting",
@@ -55,6 +68,7 @@ export function useTransfer() {
           case "file_info":
             return {
               ...prev,
+              logs: newLogs,
               fileInfo: {
                 name: event.name,
                 size: event.size,
@@ -78,6 +92,7 @@ export function useTransfer() {
           case "complete":
             return {
               ...prev,
+              logs: newLogs,
               transferState: "complete",
               result: {
                 bytes: event.bytes,
@@ -91,6 +106,7 @@ export function useTransfer() {
           case "error":
             return {
               ...prev,
+              logs: newLogs,
               transferState: "error",
               error: event.message,
             };
@@ -98,11 +114,11 @@ export function useTransfer() {
           case "log":
             return {
               ...prev,
-              logs: [...prev.logs, `[${event.level}] ${event.message}`],
+              logs: [...prev.logs, `${ts()} [${event.level}] ${event.message}`],
             };
 
           default:
-            return prev;
+            return { ...prev, logs: newLogs };
         }
       });
     } catch {
@@ -112,12 +128,14 @@ export function useTransfer() {
 
   const startSend = useCallback(
     async (config: SessionConfig, filePath: string) => {
+      cancelledRef.current = false;
       setState({ ...initialState, transferState: "connecting" });
 
       try {
         const command = await spawnSend(config, filePath);
 
         command.on("close", (data) => {
+          if (cancelledRef.current) return;
           if (data.code !== 0) {
             setState((prev) =>
               prev.transferState === "complete"
@@ -133,6 +151,7 @@ export function useTransfer() {
         });
 
         command.on("error", (error) => {
+          if (cancelledRef.current) return;
           setState((prev) => ({
             ...prev,
             transferState: "error",
@@ -142,9 +161,10 @@ export function useTransfer() {
 
         command.stdout.on("data", handleEvent);
         command.stderr.on("data", (line) => {
+          if (cancelledRef.current) return;
           setState((prev) => ({
             ...prev,
-            logs: [...prev.logs, `[stderr] ${line}`],
+            logs: [...prev.logs, `${ts()} [stderr] ${line}`],
           }));
         });
 
@@ -163,6 +183,7 @@ export function useTransfer() {
 
   const startReceive = useCallback(
     async (config: SessionConfig, outputDir: string) => {
+      cancelledRef.current = false;
       setState({
         ...initialState,
         transferState: "connecting",
@@ -172,6 +193,7 @@ export function useTransfer() {
         const command = await spawnReceive(config, outputDir);
 
         command.on("close", (data) => {
+          if (cancelledRef.current) return;
           if (data.code !== 0) {
             setState((prev) =>
               prev.transferState === "complete"
@@ -187,6 +209,7 @@ export function useTransfer() {
         });
 
         command.on("error", (error) => {
+          if (cancelledRef.current) return;
           setState((prev) => ({
             ...prev,
             transferState: "error",
@@ -196,9 +219,10 @@ export function useTransfer() {
 
         command.stdout.on("data", handleEvent);
         command.stderr.on("data", (line) => {
+          if (cancelledRef.current) return;
           setState((prev) => ({
             ...prev,
-            logs: [...prev.logs, `[stderr] ${line}`],
+            logs: [...prev.logs, `${ts()} [stderr] ${line}`],
           }));
         });
 
@@ -216,15 +240,20 @@ export function useTransfer() {
   );
 
   const cancel = useCallback(async () => {
+    cancelledRef.current = true;
     if (processRef.current) {
       await processRef.current.kill();
       processRef.current = null;
-      setState((prev) => ({
-        ...prev,
-        transferState: "idle",
-        error: null,
-      }));
     }
+    setState((prev) => ({
+      ...prev,
+      transferState: "cancelled",
+      logs: [...prev.logs, `${ts()} [info] Transfer cancelled by user`],
+    }));
+  }, []);
+
+  const clearLogs = useCallback(() => {
+    setState((prev) => ({ ...prev, logs: [] }));
   }, []);
 
   const reset = useCallback(() => {
@@ -237,6 +266,7 @@ export function useTransfer() {
     startSend,
     startReceive,
     cancel,
+    clearLogs,
     reset,
   };
 }

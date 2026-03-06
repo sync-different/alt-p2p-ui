@@ -6,7 +6,7 @@ $ErrorActionPreference = "Stop"
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ProjectDir = Split-Path -Parent $ScriptDir
-$JarPath = Join-Path (Split-Path -Parent $ProjectDir) "alt-p2p\target\alt-p2p-0.1.0-SNAPSHOT.jar"
+$JarPath = Join-Path (Split-Path -Parent $ProjectDir) "alt-p2p\target\alt-p2p-0.2.0-SNAPSHOT.jar"
 $OutputDir = Join-Path $ProjectDir "src-tauri\resources\jre"
 
 # Resolve JDK tools (jdeps, jlink) via JAVA_HOME or PATH
