@@ -39,6 +39,8 @@ B7. ~~When user clicks Cancel, the transfer stops but no message appears to the 
 - **Root cause**: `cancel()` reset state to `initialState` (idle), so the UI jumped straight back to the form with no feedback.
 - **Fix**: Added `"cancelled"` to `TransferState`. Cancel now transitions to `"cancelled"` state (preserving logs) and appends a log entry. Both views show a yellow "Transfer cancelled" banner with a "New Transfer" button.
 
+B8. there is a UI bug.  if the user filled out fields in Send or Receive and then goes to Settings, the field values are lost.
+
 ## New functionality
 
 F1. ~~There should be a checkbox to enable/disable debug mode, which shows console output directly in the app. This is useful for debugging in production. Make the console look like a terminal window in terms of fonts, etc. The console can be a sub-window in the same window of the app. It can sit below the progress bar during transfer.~~
@@ -46,8 +48,8 @@ F1. ~~There should be a checkbox to enable/disable debug mode, which shows conso
 - **Fixed in**: `src/components/DebugConsole.tsx` (new), `src/components/SendView.tsx`, `src/components/ReceiveView.tsx`, `src/hooks/useTransfer.ts`
 - **Details**: Terminal-style console with monospace font, color-coded lines (green=stdout, yellow=stderr, red=errors). Timestamps on each line (`HH:mm:ss.SSS`). Checkbox toggle, auto-scrolls to bottom. Clear and Copy buttons in header bar. Window resizes when toggled.
 
-F2. There should be a checkbox to enable/disable Advanced mode. Which shows additional parameters users can change. For example:
-- how many retries for hole punching.
+F2. There should be a tab to allow user to change the default settings.
+- how many retries for hole punching. The tab should be 3rd tab after "Send", "Receive" , call it "Settings".
 - timeout values
 - starting packet sizes for UDP
 - **Status**: Pending
@@ -62,4 +64,15 @@ F2. There should be a checkbox to enable/disable Advanced mode. Which shows addi
 | Initial CWND | 32 | CongestionControl.java | Congestion window start (packets) |
 | Keepalive interval | 15,000ms | PacketRouter.java | Keep NAT mapping alive |
 
-**Implementation**: Phase 1 — add optional `@Option` annotations in Java CLI (`SendCommand`, `ReceiveCommand`), thread through to components. Phase 2 — add "Advanced" toggle in UI, pass values as extra CLI args via `jar.ts`.
+**Implementation**: 
+Phase 1 — add optional `@Option` annotations in Java CLI (`SendCommand`, `ReceiveCommand`), thread through to components. 
+Phase 2 — add "Advanced" toggle in UI, pass values as extra CLI args via `jar.ts`.
+
+F3. When hole punching fails after X retries, the app should relay data through the coordination server.  
+
+There should be a checkbox in Settings "Allow Relay via Coordination Server", the default should be set to on. 
+
+If the checkbox is disabled, it should just try holepunch and fail transfer if it doesn't succeed.  If enabled, the data packets can flow through coordination server.
+
+The UI should show when data relay is activated e.g. "Data Relay: Active"
+

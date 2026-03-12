@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { LogicalSize } from "@tauri-apps/api/dpi";
-import type { SessionConfig as SessionConfigType } from "../types/ipc";
+import type { SessionConfig as SessionConfigType, AdvancedSettings } from "../types/ipc";
 import { useTransfer } from "../hooks/useTransfer";
 import SessionConfig from "./SessionConfig";
 import ConnectionStatus from "./ConnectionStatus";
@@ -11,20 +11,21 @@ import DebugConsole from "./DebugConsole";
 
 interface Props {
   onActiveChange: (active: boolean) => void;
+  settings: AdvancedSettings;
+  config: SessionConfigType;
+  onConfigChange: (config: SessionConfigType) => void;
+  filePath: string | null;
+  onFilePathChange: (path: string | null) => void;
 }
 
-export default function SendView({ onActiveChange }: Props) {
-  const [config, setConfig] = useState<SessionConfigType>({
-    sessionId: "",
-    psk: "",
-    serverAddress: "",
-  });
-  const [filePath, setFilePath] = useState<string | null>(null);
+export default function SendView({ onActiveChange, settings, config, onConfigChange, filePath, onFilePathChange }: Props) {
   const [debug, setDebug] = useState(false);
 
   const {
     transferState,
     connectionState,
+    isRelay,
+    isTcpRelay,
     progress,
     fileInfo,
     result,
@@ -57,20 +58,20 @@ export default function SendView({ onActiveChange }: Props) {
       directory: false,
     });
     if (selected) {
-      setFilePath(selected);
+      onFilePathChange(selected);
     }
   }
 
   async function handleSend() {
     if (!filePath) return;
-    await startSend(config, filePath);
+    await startSend(config, filePath, settings);
   }
 
   return (
     <div className="space-y-6">
       <SessionConfig
         config={config}
-        onChange={setConfig}
+        onChange={onConfigChange}
         disabled={isActive}
       />
 
@@ -108,7 +109,7 @@ export default function SendView({ onActiveChange }: Props) {
 
       {isActive && (
         <>
-          <ConnectionStatus state={connectionState} />
+          <ConnectionStatus state={connectionState} isRelay={isRelay} isTcpRelay={isTcpRelay} />
           <TransferProgress progress={progress} fileInfo={fileInfo} />
           <button
             onClick={cancel}
@@ -126,9 +127,11 @@ export default function SendView({ onActiveChange }: Props) {
           </p>
           <div className="text-xs text-green-300/70 space-y-1">
             <p>Sent: {(result.bytes / (1024 * 1024)).toFixed(1)} MB</p>
-            <p>Packets: {result.packets.toLocaleString()}</p>
-            <p>Retransmissions: {result.retransmissions}</p>
             <p>Duration: {(result.durationMs / 1000).toFixed(1)}s</p>
+            <p>Speed: {((result.bytes / (result.durationMs / 1000)) / (1024 * 1024)).toFixed(1)} MB/s</p>
+            {result.packets > 0 && <p>Retransmissions: {result.retransmissions}</p>}
+            {result.packets > 0 && <p>Error rate: {(result.retransmissions / result.packets * 100).toFixed(2)}%</p>}
+            {isTcpRelay && <p className="text-amber-300/70">Via TCP relay</p>}
           </div>
           <button
             onClick={reset}

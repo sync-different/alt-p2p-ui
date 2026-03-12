@@ -17,7 +17,7 @@ alt-p2p-ui is a Tauri v2 desktop application that wraps the [alt-p2p](https://gi
 |                                             |
 |  +---------------------------------------+  |
 |  |              App.tsx                   |  |
-|  |  [Send Tab]  [Receive Tab]            |  |
+|  |  [Send Tab]  [Receive Tab] [Settings] |  |
 |  +---------------------------------------+  |
 |            |                  |              |
 |  +---------v------+  +-------v----------+   |
@@ -63,7 +63,7 @@ The Java process emits events as JSON objects, one per line on stdout:
 
 | Event | Fields | Description |
 |-------|--------|-------------|
-| `status` | `state` | Connection lifecycle: `registering`, `waiting_peer`, `punching`, `handshaking`, `connected` |
+| `status` | `state` | Connection lifecycle: `registering`, `waiting_peer`, `punching`, `handshaking`/`relaying`/`relay_tcp`, `connected` |
 | `file_info` | `name`, `size`, `sha256` | File metadata (sender computes before connecting) |
 | `progress` | `bytes`, `total`, `speed_bps`, `eta_seconds`, `percent` | Transfer progress (emitted every 250ms) |
 | `complete` | `bytes`, `packets`, `retransmissions`, `duration_ms`, `path?` | Transfer finished successfully |
@@ -90,7 +90,7 @@ idle ──> connecting ──> transferring ──> complete
 ```
 
 - **idle**: No process running. User can configure session and start.
-- **connecting**: Process spawned, cycling through `registering` > `waiting_peer` > `punching` > `handshaking` > `connected`.
+- **connecting**: Process spawned, cycling through `registering` > `waiting_peer` > `punching` > `handshaking` (or `relay_tcp`/`relaying` if relay fallback) > `connected`.
 - **transferring**: First `progress` event received. Progress bar active.
 - **complete**: `complete` event received. Shows summary.
 - **error**: `error` event received, or process exited with non-zero code.
@@ -189,7 +189,7 @@ Configured in `tauri.conf.json` > `bundle.resources`:
 
 ```json
 {
-  "../../alt-p2p/target/alt-p2p-0.2.0-SNAPSHOT.jar": "alt-p2p.jar",
+  "../../alt-p2p/target/alt-p2p-0.3.0-SNAPSHOT.jar": "alt-p2p.jar",
   "resources/jre/": "jre/"
 }
 ```

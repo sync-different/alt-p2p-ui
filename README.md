@@ -49,7 +49,7 @@ npm run tauri build
 
 Produces:
 - `src-tauri/target/release/bundle/macos/alt-p2p.app` (44MB)
-- `src-tauri/target/release/bundle/dmg/alt-p2p_0.1.0_aarch64.dmg` (28MB)
+- `src-tauri/target/release/bundle/dmg/alt-p2p_0.3.0_aarch64.dmg` (28MB)
 
 ### Windows
 
@@ -68,8 +68,8 @@ npm run tauri build
 ```
 
 Produces:
-- `src-tauri/target/release/bundle/nsis/alt-p2p_0.1.0_x64-setup.exe` (NSIS installer, ~45MB)
-- `src-tauri/target/release/bundle/msi/alt-p2p_0.1.0_x64_en-US.msi` (MSI installer)
+- `src-tauri/target/release/bundle/nsis/alt-p2p_0.3.0_x64-setup.exe` (NSIS installer, ~45MB)
+- `src-tauri/target/release/bundle/msi/alt-p2p_0.3.0_x64_en-US.msi` (MSI installer)
 
 ### What's in the macOS `.app` bundle
 
@@ -125,12 +125,12 @@ No Java installation needed on either platform — the custom JRE is bundled.
 
 1. Start the **coordination server** on a reachable host:
    ```bash
-   java -jar alt-p2p-0.2.0-SNAPSHOT.jar server --psk <shared-secret>
+   java -jar alt-p2p-0.3.0-SNAPSHOT.jar server --psk <shared-secret>
    ```
 2. On the **sender** Mac: open the app, select the Send tab, fill in the session ID, pre-shared key, and server address (`host:9000`), pick a file, and click Send.
 3. On the **receiver** Mac: open the app, select the Receive tab, fill in the same session ID, PSK, and server address, pick an output directory, and click Receive.
 
-Both peers will connect through the coordination server, punch through NATs, establish a DTLS-encrypted channel, and transfer the file with live progress.
+Both peers will connect through the coordination server, punch through NATs, establish a DTLS-encrypted channel, and transfer the file with live progress. If hole punching fails, enable **Allow relay fallback** in Settings to relay through the server via TCP (~15 MB/s).
 
 ## Project Structure
 
@@ -141,14 +141,16 @@ scripts/
   copy-sidecar.mjs          # Copies compiled sidecar to binaries/ with platform triple
 
 src/
-  App.tsx                   # Root component with Send/Receive tabs
+  App.tsx                   # Root component with Send/Receive/Settings tabs
   main.tsx                  # React entry point
   components/
     SendView.tsx            # Send tab: file picker + session config + transfer
     ReceiveView.tsx         # Receive tab: directory picker + session config + transfer
     SessionConfig.tsx       # Session ID, PSK, server address inputs
-    ConnectionStatus.tsx    # Connection progress stepper
+    SettingsView.tsx       # Advanced settings (relay mode, timeouts)
+    ConnectionStatus.tsx    # Connection progress stepper (direct/relay/TCP relay)
     TransferProgress.tsx    # Progress bar, speed, ETA display
+    DebugConsole.tsx        # Collapsible log viewer
   hooks/
     useTransfer.ts          # Core transfer hook: spawns JAR, parses JSON events
   lib/
@@ -188,3 +190,4 @@ src-tauri/
 - **Code signing** &mdash; macOS notarization and Windows Authenticode signing for distribution without Gatekeeper/SmartScreen warnings.
 - **Auto-update** &mdash; Tauri v2's built-in updater for seamless version upgrades.
 - **Embedded coordination server** &mdash; Option to run the coord server within the app itself, eliminating the need for a separate server process.
+- **Multi-file transfer** &mdash; Send multiple files or directories in a single session.

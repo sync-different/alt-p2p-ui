@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { LogicalSize } from "@tauri-apps/api/dpi";
-import type { SessionConfig as SessionConfigType } from "../types/ipc";
+import type { SessionConfig as SessionConfigType, AdvancedSettings } from "../types/ipc";
 import { useTransfer } from "../hooks/useTransfer";
 import SessionConfig from "./SessionConfig";
 import ConnectionStatus from "./ConnectionStatus";
@@ -11,20 +11,21 @@ import DebugConsole from "./DebugConsole";
 
 interface Props {
   onActiveChange: (active: boolean) => void;
+  settings: AdvancedSettings;
+  config: SessionConfigType;
+  onConfigChange: (config: SessionConfigType) => void;
+  outputDir: string | null;
+  onOutputDirChange: (dir: string | null) => void;
 }
 
-export default function ReceiveView({ onActiveChange }: Props) {
-  const [config, setConfig] = useState<SessionConfigType>({
-    sessionId: "",
-    psk: "",
-    serverAddress: "",
-  });
-  const [outputDir, setOutputDir] = useState<string | null>(null);
+export default function ReceiveView({ onActiveChange, settings, config, onConfigChange, outputDir, onOutputDirChange }: Props) {
   const [debug, setDebug] = useState(false);
 
   const {
     transferState,
     connectionState,
+    isRelay,
+    isTcpRelay,
     progress,
     fileInfo,
     result,
@@ -57,20 +58,20 @@ export default function ReceiveView({ onActiveChange }: Props) {
       directory: true,
     });
     if (selected) {
-      setOutputDir(selected);
+      onOutputDirChange(selected);
     }
   }
 
   async function handleReceive() {
     if (!outputDir) return;
-    await startReceive(config, outputDir);
+    await startReceive(config, outputDir, settings);
   }
 
   return (
     <div className="space-y-6">
       <SessionConfig
         config={config}
-        onChange={setConfig}
+        onChange={onConfigChange}
         disabled={isActive}
       />
 
@@ -108,7 +109,7 @@ export default function ReceiveView({ onActiveChange }: Props) {
 
       {isActive && (
         <>
-          <ConnectionStatus state={connectionState} />
+          <ConnectionStatus state={connectionState} isRelay={isRelay} isTcpRelay={isTcpRelay} />
           {transferState === "connecting" && !fileInfo && (
             <p className="text-sm text-slate-400 animate-pulse">
               Waiting for file offer...
@@ -131,8 +132,12 @@ export default function ReceiveView({ onActiveChange }: Props) {
           </p>
           <div className="text-xs text-green-300/70 space-y-1">
             <p>Received: {(result.bytes / (1024 * 1024)).toFixed(1)} MB</p>
-            <p>Packets: {result.packets.toLocaleString()}</p>
+            <p>Duration: {(result.durationMs / 1000).toFixed(1)}s</p>
+            <p>Speed: {((result.bytes / (result.durationMs / 1000)) / (1024 * 1024)).toFixed(1)} MB/s</p>
+            {result.packets > 0 && <p>Retransmissions: {result.retransmissions}</p>}
+            {result.packets > 0 && <p>Error rate: {(result.retransmissions / result.packets * 100).toFixed(2)}%</p>}
             {result.path && <p>Saved to: {result.path}</p>}
+            {isTcpRelay && <p className="text-amber-300/70">Via TCP relay</p>}
           </div>
           <button
             onClick={reset}

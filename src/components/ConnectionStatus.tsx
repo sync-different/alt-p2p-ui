@@ -2,9 +2,11 @@ import type { ConnectionState } from "../types/ipc";
 
 interface Props {
   state: ConnectionState | null;
+  isRelay?: boolean;
+  isTcpRelay?: boolean;
 }
 
-const steps: { key: ConnectionState; label: string }[] = [
+const directSteps: { key: ConnectionState; label: string }[] = [
   { key: "registering", label: "Registering" },
   { key: "waiting_peer", label: "Waiting for peer" },
   { key: "punching", label: "Hole punching" },
@@ -12,9 +14,24 @@ const steps: { key: ConnectionState; label: string }[] = [
   { key: "connected", label: "Connected" },
 ];
 
-export default function ConnectionStatus({ state }: Props) {
+const relaySteps: { key: ConnectionState; label: string }[] = [
+  { key: "registering", label: "Registering" },
+  { key: "waiting_peer", label: "Waiting for peer" },
+  { key: "relaying", label: "UDP Relay" },
+  { key: "connected", label: "Connected" },
+];
+
+const relayTcpSteps: { key: ConnectionState; label: string }[] = [
+  { key: "registering", label: "Registering" },
+  { key: "waiting_peer", label: "Waiting for peer" },
+  { key: "relay_tcp", label: "TCP Relay" },
+  { key: "connected", label: "Connected" },
+];
+
+export default function ConnectionStatus({ state, isRelay, isTcpRelay }: Props) {
   if (!state) return null;
 
+  const steps = isRelay ? (isTcpRelay ? relayTcpSteps : relaySteps) : directSteps;
   const currentIndex = steps.findIndex((s) => s.key === state);
 
   return (
@@ -22,6 +39,7 @@ export default function ConnectionStatus({ state }: Props) {
       {steps.map((step, i) => {
         const isActive = i === currentIndex;
         const isDone = i < currentIndex;
+        const isRelayStep = step.key === "relaying" || step.key === "relay_tcp";
 
         return (
           <div key={step.key} className="flex items-center gap-2">
@@ -36,7 +54,9 @@ export default function ConnectionStatus({ state }: Props) {
                   isDone
                     ? "bg-green-500"
                     : isActive
-                      ? "bg-blue-400 animate-pulse"
+                      ? isRelayStep
+                        ? "bg-amber-400 animate-pulse"
+                        : "bg-blue-400 animate-pulse"
                       : "bg-slate-700"
                 }`}
               />
@@ -45,7 +65,9 @@ export default function ConnectionStatus({ state }: Props) {
                   isDone
                     ? "text-green-400"
                     : isActive
-                      ? "text-blue-300"
+                      ? isRelayStep
+                        ? "text-amber-300"
+                        : "text-blue-300"
                       : "text-slate-600"
                 }`}
               >

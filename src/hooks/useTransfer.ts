@@ -8,12 +8,15 @@ import type {
   FileInfo,
   TransferResult,
   SessionConfig,
+  AdvancedSettings,
 } from "../types/ipc";
 import { spawnSend, spawnReceive } from "../lib/jar";
 
 interface TransferHookState {
   transferState: TransferState;
   connectionState: ConnectionState | null;
+  isRelay: boolean;
+  isTcpRelay: boolean;
   progress: TransferProgressInfo | null;
   fileInfo: FileInfo | null;
   result: TransferResult | null;
@@ -24,6 +27,8 @@ interface TransferHookState {
 const initialState: TransferHookState = {
   transferState: "idle",
   connectionState: null,
+  isRelay: false,
+  isTcpRelay: false,
   progress: null,
   fileInfo: null,
   result: null,
@@ -61,6 +66,8 @@ export function useTransfer() {
               ...prev,
               logs: newLogs,
               connectionState: event.state,
+              isRelay: prev.isRelay || event.state === "relaying" || event.state === "relay_tcp",
+              isTcpRelay: prev.isTcpRelay || event.state === "relay_tcp",
               transferState:
                 event.state === "connected" ? "transferring" : "connecting",
             };
@@ -127,12 +134,12 @@ export function useTransfer() {
   }, []);
 
   const startSend = useCallback(
-    async (config: SessionConfig, filePath: string) => {
+    async (config: SessionConfig, filePath: string, settings?: AdvancedSettings) => {
       cancelledRef.current = false;
       setState({ ...initialState, transferState: "connecting" });
 
       try {
-        const command = await spawnSend(config, filePath);
+        const command = await spawnSend(config, filePath, settings);
 
         command.on("close", (data) => {
           if (cancelledRef.current) return;
@@ -182,7 +189,7 @@ export function useTransfer() {
   );
 
   const startReceive = useCallback(
-    async (config: SessionConfig, outputDir: string) => {
+    async (config: SessionConfig, outputDir: string, settings?: AdvancedSettings) => {
       cancelledRef.current = false;
       setState({
         ...initialState,
@@ -190,7 +197,7 @@ export function useTransfer() {
       });
 
       try {
-        const command = await spawnReceive(config, outputDir);
+        const command = await spawnReceive(config, outputDir, settings);
 
         command.on("close", (data) => {
           if (cancelledRef.current) return;

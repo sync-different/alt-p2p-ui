@@ -1,6 +1,6 @@
 [package]
 name = "alt-p2p-ui"
-version = "0.2.0"
+version = "0.3.0"
 description = "Desktop GUI for alt-p2p file transfer"
 edition = "2021"
 

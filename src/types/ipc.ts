@@ -4,6 +4,8 @@ export type ConnectionState =
   | "waiting_peer"
   | "punching"
   | "handshaking"
+  | "relaying"
+  | "relay_tcp"
   | "connected";
 
 /** Transfer lifecycle states */
@@ -45,6 +47,18 @@ export interface SessionConfig {
   sessionId: string;
   psk: string;
   serverAddress: string;
+}
+
+/** Advanced tuning parameters (all optional — omitted values use Java defaults) */
+export interface AdvancedSettings {
+  punchTimeoutMs: string;
+  punchIntervalMs: string;
+  dtlsRetries: string;
+  dtlsTimeoutMs: string;
+  initialCwnd: string;
+  keepaliveIntervalMs: string;
+  allowRelay: boolean;
+  relayMode: "tcp" | "udp";
 }
 
 /** Progress snapshot derived from IPC progress events */
